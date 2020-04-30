@@ -1,0 +1,134 @@
+---
+title: "hw6-Rohit-Thakur"
+author: "Rohit Thakur"
+date: "3/31/2020"
+output: pdf_document
+---
+
+```{r}
+library(textdata)
+library(readr)
+library(ggplot2)
+library(tidytext)
+library(tokenizers)
+library(dplyr)
+library(tidyr)
+```
+
+PROBLEM 1
+```{r}
+speech<-read_lines("D:/Spring 20 Sem 2/DMP/full_speech.txt")
+tidy_speech<-tibble(line=1:length(speech), text=speech)
+tidy_speech<-tidy_speech%>%unnest_tokens(bigram,text,token="ngrams",n=2)
+tidy_bigram<-tidy_speech%>%separate(bigram, c("word1", "word2"), sep = " ")
+tidy_bigram1<-tidy_bigram%>%
+  filter(!word1 %in% c(stop_words$word, "applause"))%>%
+  filter(!word1 %in% c("not", "no", "never", "without"))%>%
+  filter(!word2 %in% c(stop_words$word, "applause"))%>%
+  unite(bigram, word1, word2, sep = " ")
+tidy_bigram1%>%count(bigram,sort = TRUE)%>%
+  top_n(15)%>%
+  ggplot()+geom_bar(aes(x=reorder(bigram,n),y=n),stat="identity")+
+  coord_flip()+xlab("Bigram")+ylab("count")
+  
+
+```
+PROBLEM 2
+```{r}
+tidy_bigram2<-tidy_speech%>%separate(bigram, c("word1", "word2"), sep = " ")
+tidy_bigram2<-tidy_bigram2%>%
+  filter(word1 %in% c("not", "no", "never", "without"))%>%
+  filter(!word2 %in% c(stop_words$word, "applause"))
+problem_2<-tidy_bigram2%>%count(word1,word2,sort=TRUE)%>%
+  group_by(word1)%>%
+  top_n(5)%>%
+  ggplot()+geom_bar(aes(x=reorder(word2,n),y=n),stat="identity")+
+  facet_wrap(~word1,scales="free")+
+  coord_flip()+xlab("Word2")
+print(problem_2)
+```
+PROBLEM 3
+```{r}
+problem3<-tidy_bigram%>%
+  filter(!word1 %in% c("not", "no", "never", "without"))%>%
+  filter(!word2 %in% c(stop_words$word,"applause"))
+problem3<-problem3%>%
+  inner_join(get_sentiments("loughran"), by=c("word2"="word"))%>%
+  count(word2, sentiment, sort=TRUE)%>%
+  group_by(sentiment)%>%
+  top_n(5)
+problem3_plot<-problem3%>%
+  ggplot()+geom_bar(aes(x=reorder(word2,n),y=n),stat="identity")+
+  facet_wrap(~sentiment,scales="free")+
+  coord_flip()+xlab("word2")+ylab("count")
+print(problem3_plot)
+```
+
+PROBLEM 4
+```{r}
+library(gutenbergr)
+titles<-c("Pride and Prejudice","The War of the Worlds")
+books<-gutenberg_works(title %in% titles)%>%
+  gutenberg_download(meta_fields = c("title","author"))
+books<-mutate(books,document=row_number())
+tidy_book<-books%>%
+  unnest_tokens(word,text)%>%
+  group_by(word)%>%
+  filter(!n()<10)
+tidy_book<-tidy_book%>%
+  anti_join(stop_words)%>%
+  count(title,word,sort=TRUE)%>%
+  group_by(title)%>%
+  top_n(15)
+  
+tidy_book
+ggplot(tidy_book)+geom_bar(aes(x=reorder(word,n),y=n),stat="identity")+
+  facet_wrap(~title,scales="free")+
+  coord_flip()
+  
+```
+
+
+PROBLEM 5
+```{r}
+tidy_book_1<-books%>%
+  mutate(document=row_number())%>%
+  unnest_tokens(word,text)%>%
+  group_by(word)%>%
+  filter(!n()<10)
+head(tidy_book_1)
+doc<-tidy_book_1%>%
+  count(document,word)
+head(doc)
+```
+
+
+Creating Document term matrix
+```{r}
+doc_mat<-doc%>%
+  cast_dtm(document,word,n)%>%
+  as.matrix()
+```
+
+
+```{r}
+doc_id<-data.frame(document=as.integer(rownames(doc_mat)))
+doc_id<-doc_id%>%left_join(books)%>%
+  select(document,author)
+doc_id<-mutate(doc_id,author=as.factor(author))
+```
+
+```{r}
+library(caret)
+library(e1071)
+set.seed(0)
+partition<- createDataPartition(doc_id$author,p=0.75, list=FALSE)
+test_data<-doc_mat[-partition,]
+x=doc_mat[partition,]
+y=doc_id$author[partition]
+model<-train(x=x,y=y,method="svmLinear",
+             trControl =trainControl(method="none"))
+prediction<-predict(model,test_data)
+confusionMatrix(prediction,doc_id$author[-partition])
+```
+

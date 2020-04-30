@@ -1,0 +1,228 @@
+---
+title: "HW4-Rohit-Thakur"
+author: "Rohit Thakur"
+date: "2/24/2020"
+output: pdf_document
+---
+```{r}
+load("D:/Spring 20 Sem 2/DMP/ICPSR_31721/DS0001/31721-0001-Data.rda")
+df<-da31721.0001
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+PROBLEM 1
+```{r}
+df1 <- 
+  mutate(df,Q6=ifelse(
+      (df$Q6=="(1) Man" & df$Q5=="(2) Female"),"transmen",
+      ifelse((df$Q6=="(2) Woman" & df$Q5=="(1) Male"),"transwomen",
+      ifelse((df$Q6=="(4) Androgynous" | df$Q6=="(6) Gender Queer"),"non-binary", 
+      df$Q6))))
+
+df1<- filter(df1,(Q6=="transmen" | Q6=="transwomen" | Q6=="non-binary"))
+df1%>%ggplot()+
+  geom_bar(aes(x=as.factor(Q6)))+
+  xlab("Category")+
+  ylab("count")+
+  ggtitle("Count for each gender category")
+df1<- filter(df1,Q88!="(10) Missing") 
+df1%>%dplyr::group_by(Q6)%>%
+  summarise(y = sum(Q88=="(1) Yes"), n= sum(Q88 == "(2) No"))%>%
+  mutate(prop=y/(y+n))%>%
+ggplot() + geom_col(aes(x=Q6,y=prop))+
+  xlab("Gender Category")+ylab("Proportion") + 
+  ggtitle("Proportion of participants who have ever been homeless")
+#Proportion of homeless participants
+df1%>%summarize(proportion_homeless=mean(Q88 == "(1) Yes"))
+```
+participants in our survey have experienced homelessness more than general US population.
+Problem 2
+```{r}
+df2<-df
+df2<-rename(df2,African_American=D9_1,Caucasian=D9_2,Hispanic_Latino=D9_3, Native_American=D9_4)
+df2<-df2%>%
+  gather(`African_American`,
+         `Caucasian`,
+         `Hispanic_Latino`,
+         `Native_American`,
+          key="Race",
+          value="value")%>%
+  filter(value=="(1) Selected")
+summary(df2$Race)
+df2<-df2%>% filter(Q88!="(10) Missing")
+summary(df2$Race)
+df2%>%
+  group_by(Race)%>%
+  summarise(y = sum(Q88=="(1) Yes"), n= sum(Q88 == "(2) No"))%>%
+  mutate(prop=y/(y+n))%>%
+  ggplot() + geom_col(aes(x=Race,y=prop))+
+  xlab("Gender Category")+ylab("Proportion") +
+  ggtitle("Proportion of participants who have ever been homeless")
+df2%>%summarize(proportion_homeless=mean(Q88 == "(1) Yes"))
+```
+From above proportion 25.96% participants from our study experience homelessness
+in their lifetime. This is greater than national US average.
+
+```{r}
+df3<-df
+df3<-df3%>%mutate(Q133=ifelse(is.na(df3$Q133),"Missing",df3$Q133))
+summary(df3$Q133)
+#Mapped NAs to missing and yes response to 1 and no response to 2
+df3%>%summarize(proportion_suicide_attempt=mean(df3$Q133=="1"))
+summary(df3$Q119)
+df4<-df3
+df4<-df4[!is.na(df4$Q119),]
+summary(df4$Q119)
+df4<-filter(df4,Q119!="(5) Not applicable to me")
+df4<-df4[!is.na(df4$Q131),]
+df4%>%group_by(Q119)%>%
+  summarise(y = sum(Q131=="(1) Yes"), n= sum(Q131 == "(2) No"))%>%
+  mutate(prop=y/(y+n))%>%
+  ggplot()+geom_col(aes(x=Q119,y=prop))+
+  xlab("Suicidal thoughts")+ylab("Proportion")+
+  ggtitle("proportions of participants thought about killing themselves vs familial support")   
+```
+From above proportion of participants who have attempted suicide in Virginia in this survey
+is 25.14% which is below national average for trans people but much higher than average
+proportion of general population. 
+
+
+From above graph for participants who have thought of attempting suicide vs familial support levels
+we can conclude that there is higher percentage of participants who have positive suicidal thoughts 
+overall in all familial support categories. But family support surely reduces percentage of population
+of participants that are having positive suicidal thoughts. Highest percentage of participants that have
+positive suicidal thoughts can be seen in participants with no supoortive family. This proportion get
+reduced as the family support level increases.
+
+
+
+Problem 4
+```{r}
+library(mlbench)
+library(modelr)
+```
+```{r}
+data("PimaIndiansDiabetes2")
+#First we will select pregnant column for mass. 
+PimaIndiansDiabetes2%>%ggplot(aes(x=pregnant,y=mass))+geom_point()+geom_smooth()
+
+#Glucose vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=glucose,y=mass))+geom_point()+geom_smooth()
+
+#Pressure vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=log(pressure),y=mass))+geom_point()+geom_smooth()
+#from above graph there is a linear relationship with pressure and mass. Log og predictor variable
+#better helps in visualizing this relationship.
+#Triceps vs mass
+
+PimaIndiansDiabetes2%>%ggplot(aes(x=triceps,y=log2(mass)))+geom_point()+geom_smooth()
+#From above we can see a linear relationship between log of response variable and triceps
+#log of response variable better depicts above relationship.
+
+#Insulin vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=insulin,y=mass))+geom_point()+geom_smooth()
+
+
+#pedigree vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=pedigree,y=mass))+geom_point()+geom_smooth()
+
+#age vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=age,y=mass))+geom_point()+geom_smooth()
+
+#diabetes vs mass
+PimaIndiansDiabetes2%>%ggplot(aes(x=diabetes,y=mass))+geom_boxplot()
+
+
+```
+From above plots we can see that there is a linear relationship between (pressure,mass) and 
+(triceps,mass). Thus we select these two columns as predictor variables. There are simply not 
+enough categories to decide whether relationship between diabetes and mass is linear.
+Now fitting linear model for above two variables:
+
+```{r}
+fit_1<-lm(mass~pressure+triceps,data=PimaIndiansDiabetes2)
+summary(fit_1)
+```
+Problem 5
+```{r}
+#residuals for predictor variable pressure
+PimaIndiansDiabetes2%>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(x=pressure)) + geom_point(aes(y=residuals))
+
+
+#residuals for predictor variable triceps
+
+PimaIndiansDiabetes2%>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(x=triceps)) + geom_point(aes(y=residuals))
+
+#From residual plots we can observe they are randomly dispersed around horizontal axis.
+#This proves linear regression model is appropriate for this data.
+
+#relationship between the residuals and the other potential predictor variables that are not
+#currently in model
+
+#for diabetes
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(diabetes, residuals)) + geom_boxplot()
+
+#for pregnant
+
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(pregnant, residuals)) + geom_point() + geom_smooth()
+
+#for glucose
+
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(glucose, residuals)) + geom_point()
+
+#for insulin
+
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(insulin, log2(residuals))) + geom_point() + geom_smooth()
+
+#for pedigree
+
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(pedigree, residuals)) + geom_point() + geom_smooth()
+
+#for age
+
+PimaIndiansDiabetes2 %>%
+add_residuals(fit_1, "residuals") %>%
+ggplot(aes(age, residuals)) + geom_point() + geom_smooth()
+
+fit_3<-lm(mass~pressure+triceps+pregnant,data=PimaIndiansDiabetes2)
+summary(fit_3)
+
+# we will find rmse for two ,three, four variables
+
+fit_4<-lm(mass~pressure+triceps+diabetes+pregnant,data=PimaIndiansDiabetes2)
+summary(fit_4)
+rmse(fit_1,PimaIndiansDiabetes2)
+rmse(fit_3,PimaIndiansDiabetes2)
+rmse(fit_4,PimaIndiansDiabetes2)
+# we can see rmse is decreasing as we add diabetes and pregnant predictor variable compared to 
+#two variable model.
+
+#visualizing rmse
+fits_rmse <- tibble(nvar = 1:3,
+rmse = c(rmse(fit_1,PimaIndiansDiabetes2),
+rmse(fit_3,PimaIndiansDiabetes2),
+rmse(fit_4,PimaIndiansDiabetes2)))
+ggplot(fits_rmse) + geom_line(aes(x=nvar, y=rmse)) +xlab("Variables")
+```
+From above residual plots we cannot see any definitive systematic pattern for variables. But
+for diabetes and pregnant variables there is some pattern.
+we'll add this predictor variables to our model.
+After calculating rmse for three and four variables model we compare it
+and find value to be lower.
+
+Plotting RMSE we get linear decrease in rmse for these three fits.

@@ -1,0 +1,278 @@
+---
+title: "hw2-Rohit-Thakur"
+author: "Rohit Thakur"
+date: "1/24/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+Problem 1 ->
+
+Find a dataset that is personally interesting to you. 
+It may be a publicly-available dataset, or a dataset for
+which you have permission to use and share results.
+There are many places online to find publicly-available
+dataset, and simply searching Google for your preferred topic plus “public dataset” may provide many hits.
+Here some additional resources to get you started:
+• US Government datasets (https://catalog.data.gov/dataset)
+• Center for Disease Control (CDC) data (https://data.cdc.gov)
+• Bureau of Labor Statistics (https://www.bls.gov/data/)
+• NASA datasets (https://nssdc.gsfc.nasa.gov)
+• World Bank Open Data (https://data.worldbank.org)
+• Kaggle Datasets (https://www.kaggle.com/datasets)
+This does not have to be the same dataset you will use for your group project.
+Import the dataset into R, put it into a tidy format, and print the first ten observations of the dataset
+
+Answer:
+
+```{r}
+library(dplyr)
+library(tidyr)
+df<-read.csv("C:/Users/rthak/OneDrive/Desktop/crime.csv")
+head(df,n=10)
+df1<-select(df,-c("INCIDENT_NUMBER","OFFENSE_CODE","Location","OFFENSE_DESCRIPTION"))
+df1<-separate(df1,col="OCCURRED_ON_DATE",into=c("Date","Time"),sep=" ") 
+df1<-filter(df1,df1$DISTRICT!="")
+
+```
+
+Problem 2 -> 
+
+Perform exploratory data analysis on the dataset, using the techniques learned in class. Calculate
+summary statistics that are of interest to you and create plots using ggplot2 that show your findings.
+
+Answer:
+
+Observations made from below graph:
+UCR_PART three crimes are largest because they are non_violent 
+and most occuring incidents(for ex. medical emergency).
+We will further investigate insights for part one crimes as they are most violent ones.
+```{r}
+library(ggplot2)
+df1<-filter(df1,UCR_PART!=" ")
+levels(df1$UCR_PART)
+df1$UCR_PART<-droplevels(df1$UCR_PART,exclude="")
+df1<-na.omit(df1)
+ggplot(df1)+geom_bar(aes(x=UCR_PART),stat='count')
+```
+
+Focusing on Part one crimes
+```{r}
+part1<-subset(df1,UCR_PART=="Part One")
+```
+
+
+```{r}
+bypart<-part1%>%group_by(OFFENSE_CODE_GROUP)%>%summarise(occurence=n())
+bypart
+```
+
+UCR PART ONE CRIMES
+
+```{r}
+ggplot(bypart)+geom_bar(aes(reorder(x=OFFENSE_CODE_GROUP,occurence),y=occurence,fill=OFFENSE_CODE_GROUP),stat="identity")+theme(axis.text=element_text(size=5),axis.title=element_text(size=8,face="bold"),legend.position = "top")+scale_color_brewer()+labs(x="OFFENSE")
+```
+UCR PART_1 crime by district: D4 has highest number of crimes. D4 can be categorized as unsafe district.
+```{r}
+ggplot(part1)+geom_bar(aes(x=DISTRICT,fill="red"))+geom_text(aes(x=DISTRICT,label=stat(count)),stat='count',nudge_y=1000)
+```
+
+
+UCR_PART by day of week
+interesting observations: For every type of UCR_PART Fridays are having more crimes than other days.
+
+```{r}
+ggplot(df1)+geom_histogram(aes(x=UCR_PART,fill=DAY_OF_WEEK),stat='count',position="dodge")
+```
+From bar graph below, larceny has greatest share in d4 crimes.
+```{r}
+d4<-subset(part1,part1$DISTRICT==c("D4","B2","A1"))
+ggplot(d4)+geom_histogram(aes(x=OFFENSE_CODE_GROUP),stat='count')+theme(axis.text.x = element_text(size=8,angle = 90))+facet_grid(~DISTRICT)
+```
+
+Problems 3–4 use data from the Navajo Nation Water Quality Project. Download the CSV file from
+http://navajowater.org/export-raw-data/.
+Water quality is a major issue on Native American reservations in the southwestern United States. The
+prevalence of uranium mines and uranium mill accidents mean that much of the water in the Navajo Nation
+is irradiated, and many homes are left without clean, drinkable water. Multiple environmental agencies
+routinely sample water in the region and report on contaminants.
+
+
+Problem 3 ->
+
+The concentration of radiactive elements in a sample is measured in 
+rate of atomic disintegrations per volume,
+rather than mass per volume, as used for stable isotopes.
+This is done by counting the number of atomic
+disintegrations per minute and comparing it to the 
+mass of the material involved. However, laboratory
+environments and instruments used for detection 
+create some number of atomic emissions on their own, so
+background correction must be performed. 
+Because this process involves sampling many times, and the
+background can be inconsistent, 
+resulting in over-correction, sometimes negative values are reported for the
+concentration. For practical purposes
+these values can be considered zero.
+Mutate the dataset to replace the negative
+values of Radium-228 with 0, then filter the dataset to remove
+any sites with “Unknown Risk” for the EPA risk rating.
+Visualize the distribution of Radium-228 
+within each combination of EPA section and risk level. 
+State your observations.
+
+
+Answer:
+
+```{r}
+library(readr)
+navajo<-read_csv("NavajoWaterExport.csv")
+navajo<-mutate(navajo,`Amount of Radium228`=ifelse(`Amount of Radium228`<0.0,0,`Amount of Radium228`))
+navajo$`Amount of Radium228`
+```
+
+```{r}
+nv1<-filter(navajo,`US EPA Risk Rating`!="Unknown Risk")
+"Unknown Risk" %in% nv1$`US EPA Risk Rating`
+head(nv1)
+```
+
+
+```{r}
+nv1_df <- summarise(group_by(nv1, `US EPA Risk Rating`, `Which EPA Section is This From?` ,`Amount of Radium228`))
+ggplot(nv1_df) + 
+  geom_histogram(aes(x=nv1_df$`Amount of Radium228`),bins=20) +
+  facet_grid(nv1_df$`US EPA Risk Rating` ~nv1_df$`Which EPA Section is This From?`)+labs(x="Amount of Radium228")
+
+```
+
+```{r}
+library(ggplot2)
+#install.packages("maps")
+#install.packages("mapproj")
+```
+Observations: In plot above for less risk in each section, 
+amount of radium228 is less along with its frequency for each section.
+For some risk there is high frequency of radium 228 in 
+lower amount in every section. 
+For more risk amount of radium is spread around 
+larger spectrum with its frequency highest in section 2, 
+that means more number of sites of section 2 come under more risk. 
+
+
+Problem 4 ->
+Create a map of the region 
+(you may want to adjust the plotting limits to an appropriate “zoom” level)
+showing the locations of the water sampling sites, 
+along with the EPA risk and the concentration of Radium-228 for
+each location (mapped to an appropriate aesthetic).
+
+Answer:
+
+```{r}
+library(maps)
+four_corners<-map_data("state",region = c("arizona","utah","new mexico","colorado"))
+fc<-four_corners
+#deg_dec_min, deg_min_sec 
+navajo$Longitude<-measurements::conv_unit(navajo$Longitude,"deg_min_sec","dec_deg")
+navajo$Latitude<-measurements::conv_unit(navajo$Latitude,"deg_min_sec","dec_deg")
+nv2<-navajo
+nv2$Longitude<-as.numeric(nv2$Longitude)
+nv2$Latitude<-as.numeric(nv2$Latitude)
+fc$long<-abs(fc$long)
+ggplot(fc)+geom_polygon(mapping=aes(x=long,y=lat,group=group),fill="white",color="black")+geom_point(data=nv2,mapping=aes(x=Longitude,y=Latitude,size=(`Amount of Radium228`),color=`Which EPA Section is This From?`))+coord_quickmap()+xlim(100,NA)+ylim(31.25,NA)
+
+```
+
+
+
+Problems 5 ->
+uses data from the US Department of Education’s Civil Rights Data Collection.
+Download the zipped 2015-2016 data from
+https://www2.ed.gov/about/offices/list/ocr/docs/crdc-2015-16.html. The
+Public Use Data File User’s Manual should be included in the zipped files, 
+or can be downloaded at the same location. 
+Use it as a reference to help you understand the dataset.
+
+
+
+We would like to investigate whether Black students
+receive a disproportionate number of in-school suspensions.
+Create a new data.frame or tibble with the following columns:
+• The total number of students enrolled at each school
+• The number of Black students enrolled at each school
+• The total number of students who received one or 
+more in-school suspension (including non-disabled
+students and disabled students served by IDEA) at each school
+• The number of Black students who received one or 
+more in-school suspension (including non-disabled
+students and disabled students served by IDEA) at each school
+• The proportion of Black students at each 
+school among all students at that school
+• The proportion of Black students who 
+received one or more in-school suspension among all suspended
+students at that school
+Plot the proportion of Black students at 
+each school (on the x-axis) versus the proportion of suspended
+students who are Black (on the y-axis). 
+Include a smoothing line on the plot.
+What do you observe in the plot?
+Does the plot indicate an over- or under-representation of Black students
+in in-school suspensions?
+Calculate the overall proportion of Black students
+across all schools and the overall proportion of suspended
+students who are Black across all schools.
+Are Black students over- or under-represented in in-school suspensions?
+
+Answer:
+```{r}
+lea<-read_csv("D:/Spring 20 Sem 2/DMP/CRDC 2015-16 LEA Data.csv",na=c("-2","-5","-6","-7","-8","-9"))
+school<-read_csv("D:/Spring 20 Sem 2/DMP/CRDC 2015-16 School Data.csv",na=c("-2","-5","-6","-7","-8","-9"))
+head(lea)
+dim(school)
+head(school)
+school1<-school
+```
+
+
+```{r}
+school1$tot_stud=school1$TOT_ENR_M+school1$TOT_ENR_F
+school1$tot_stud_black=school1$SCH_ENR_BL_M+school1$SCH_ENR_BL_F
+school1$tot_suspension=school1$TOT_DISCWDIS_ISS_IDEA_M + school1$TOT_DISCWDIS_ISS_IDEA_F+school1$TOT_DISCWODIS_ISS_M + school1$TOT_DISCWODIS_ISS_F
+school1$tot_suspension_black=school1$SCH_DISCWODIS_ISS_BL_M + school1$SCH_DISCWODIS_ISS_BL_F + school1$SCH_DISCWDIS_ISS_IDEA_BL_M +school1$SCH_DISCWDIS_ISS_IDEA_BL_F
+school1$proportion_black=school1$tot_stud_black/school1$tot_stud
+school1$susp_prop_black = school1$tot_suspension_black/school1$tot_suspension
+x<-select(school1, tot_stud,tot_stud_black,tot_suspension,tot_suspension_black,proportion_black,susp_prop_black)
+```
+
+
+From the scatterplot below, we can see that proportion 
+of suspended black students is more in schools 
+where proportion of black students is less.
+```{r}
+x%>%sample_n(10000)%>%ggplot(aes(x=proportion_black,y=susp_prop_black))+geom_point()+geom_smooth()+xlab("Proportion of black students")+ylab("proportion of suspended black students")
+```
+In graph above we can observe under representation of black students.
+Most of the suspended black students are within 
+50% of proportion of black students.
+Also as the proportion of black student increases 
+proportion of suspended black students steadily decreases.
+```{r}
+tot_student<-sum(x$tot_stud,na.rm=TRUE)
+tot_black<-sum(x$tot_stud_black,na.rm=TRUE)
+tot_black_suspended<-sum(x$tot_suspension_black,na.rm=TRUE)
+tot_stud_suspended<-sum(x$tot_suspension,na.rm=TRUE)
+prop_black<-tot_black/tot_student
+prop_black_suspended<-tot_black_suspended/tot_stud_suspended
+cat("Overall black student proportion:",prop_black)
+cat("Overall suspended black student proportion:",prop_black_suspended)
+```
+
+```
+From above data, black students are under represented 
+in school suspension as proportion of students suspended 
+who are black holds smaller percentage of population.

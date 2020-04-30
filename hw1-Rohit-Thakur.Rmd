@@ -1,0 +1,77 @@
+---
+title: "hw1-Rohit-Thakur"
+author: "Rohit Thakur"
+date: "1/11/2020"
+output: pdf_document
+---
+PROBLEM 1 ->
+
+```{r}
+library(ggplot2)
+selectCols <- function(data, ...) {
+  args <- list(...)
+  df <- data.frame(data[args[[1]]])
+  for( a in args[-1]) {
+    df <- cbind(df, data.frame(data[a]))
+  }
+  return(df)
+}
+selectCols(mpg,"model","hwy")
+selectCols(mpg,1,2:3)
+selectCols(mpg,2,"cty","hwy")
+```
+
+PROBLEM 2 ->
+
+```{r}
+plotcols<-function(data){
+  for(a in 1 : dim(data)[2]){
+    print(typeof(data[[a]]))
+    if(class(data[[a]]) == "character"){
+      g <- ggplot(data=data,mapping= aes_string(x=colnames(data)[a])) +
+      geom_bar()
+      print(g)
+  }
+    else if((class(data[[a]]) == "numeric") | (class(data[[a]])=="integer")){
+      g <- ggplot(data=data,mapping= aes_string(x=colnames(data)[a])) +
+      geom_histogram()
+      print(g)
+      
+    }
+    
+}
+}
+```
+
+
+PROBLEM 3 ->
+
+For the boxplots shown below for price vs color of diamond,
+From D to J color is transitioning from best to worst. But unusual observation here is that
+max price of diamond increases as color goes from D to J.Color is inversely proportional to price here. This does not make any sense as diamond with best color should be more expensive. Another observation that can be made is there is a huge number of outliers whose numbers decreases as color goes to J. 
+
+```{r}
+g<-ggplot(data=diamonds,mapping=aes(x=color, y=price)) +
+  geom_boxplot()
+print(g)
+```
+
+PROBLEM 4 ->
+For color vs carat boxplot,
+we can see that as the color of diamond shifts from D to J,carat (weight) increases. Because of this fact we can make sense of previous observation for problem 3. As color of diamond degrades, it gets more heavier. Thus weight of diamond has more impact on price than color of diamond.
+ 
+```{r}
+g<-ggplot(data=diamonds,mapping=aes(x=color, y=carat)) +
+  geom_boxplot()
+print(g)
+```
+
+
+PROBLEM 5 ->
+
+Weight and price of a diamond has linear relationship among them. As weight of diamond increases it's price increases. Overlayed smooth lines indicate almost linear relationship. Also, Color of diamond has less impact on it's price. Price is more dependent on weight rather than color. Also as the color degrades from D to J, correlation between carat and price also increases. 
+```{r}
+g<-ggplot(data=diamonds,mapping=aes(x=carat, y=price)) +
+  geom_point() + facet_wrap(~color) + geom_smooth()
+print(g)
+```

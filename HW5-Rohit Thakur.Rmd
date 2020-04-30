@@ -1,0 +1,162 @@
+---
+title: "HW5-Rohit Thakur"
+author: "Rohit Thakur"
+date: "3/19/2020"
+output: pdf_document
+---
+Problem 1:
+Author: Maanasa Kaza
+Source: https://www.kaggle.com/carrie1/ecommerce-data/data#
+```{r}
+library(tidyr)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(lubridate)
+df<-read.csv("D:/Spring 20 Sem 2/DMP/data.csv")
+head(df,n=10)
+```
+Problem 2
+```{r}
+#Putting into tidy format
+df<-separate(df,col="InvoiceDate",into=c("Date","Time"),sep=" ")
+head(df)
+df<-filter(df,Description!="")
+df<-na.omit(df)
+df<-filter(df,UnitPrice > 0)
+df<-filter(df,Quantity>0)
+head(df, n=10)
+df<-mutate(df,Time=hm(Time))
+df1<-df
+df1<-df1%>%mutate(Expenditure=Quantity*UnitPrice)
+```
+```{r}
+df2 <- summarise(group_by(df1, Description), Sales=sum(Expenditure))
+df2<-df2%>% arrange(desc(Sales))
+df3<-df2[1:5,]
+ggplot()+geom_col(aes(x=reorder(df3$Description, df3$Sales),y=df3$Sales)
+                  ,fill='chocolate',width=0.7)+
+  coord_flip()+xlab("Product Description")+ylab("Sales")
+```
+```{r}
+df4<-df1%>%distinct(InvoiceNo,.keep_all=TRUE)
+df4<-separate(df4,col="Date",into=c("mm","dd","yyyy"),sep="/")
+df4<-df4%>%filter(yyyy=="2011")
+df4<-df4%>%group_by(mm)%>%summarise(Orders=n())
+
+df4$mm <- df4$mm%>%factor(levels = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+df4<- df4%>%
+  mutate(mm=recode(mm, "1"="Jan","2"="Feb","3"="Mar","4"="Apr","5"="May","6"="June",
+                       "7"="July","8"="Aug","9"="Sept","10"="Oct","11"="Nov","12"="Dec"))
+df4%>%ggplot()+geom_line(aes(x=mm,y=Orders,group=1))+xlab("Month")
+```
+
+```{r}
+  
+df5<-select(df1,Date,Time,Expenditure)
+  df5$day <- wday(as.Date(df5$Date,'%m/%d/%Y'), label = TRUE)
+
+  
+  df5<-group_by(df5,hour(Time),day)%>%summarise(total=sum(Expenditure))
+  plot<- ggplot(data = df5 ,
+                        mapping = aes(x = `hour(Time)`, y = total, group=day)) +
+  geom_line(stat = 'identity', aes(color = day)) +
+  labs(x = 'Hour', y = 'Sales')
+  print(plot)
+```
+
+
+Problem 3
+```{r}
+library(mlbench)
+library(modelr)
+library(purrr)
+data(PimaIndiansDiabetes2)
+cv<-function(formula,data,folds){
+  set.seed(1)
+  data_cv <- crossv_kfold(data,folds)
+  data_cv <- data_cv%>%
+              mutate(fit = map(train,
+                 ~ lm(formula,data=data)))
+  data_cv <- data_cv %>%
+            mutate(rmse_test = map2_dbl(fit, test, ~ rmse(.x,.y)))
+  mean_error<-mean(data_cv$rmse_test)
+  return(mean_error)
+}
+
+cv(mass~pressure+triceps+diabetes+pregnant,PimaIndiansDiabetes2,5)
+```
+
+
+
+
+Problem 4
+
+First fit for each predictor variable
+```{r}
+rmse_triceps<-cv(mass~triceps,PimaIndiansDiabetes2,5)
+print(rmse_triceps)
+rmse_diabetes<-cv(mass~diabetes,PimaIndiansDiabetes2,5)
+print(rmse_diabetes)
+rmse_pressure<-cv(mass~pressure,PimaIndiansDiabetes2,5)
+print(rmse_pressure)
+rmse_insulin<-cv(mass~insulin,PimaIndiansDiabetes2,5)
+print(rmse_insulin)
+rmse_glucose<-cv(mass~glucose,PimaIndiansDiabetes2,5)
+print(rmse_glucose)
+```
+triceps is the best predictor with rmse 5.222
+```{r}
+rmse_diabetes2<-cv(mass~triceps+diabetes,PimaIndiansDiabetes2,5)
+print(rmse_diabetes2)
+rmse_pressure2<-cv(mass~triceps+pressure,PimaIndiansDiabetes2,5)
+print(rmse_pressure2)
+rmse_insulin2<-cv(mass~triceps+insulin,PimaIndiansDiabetes2,5)
+print(rmse_insulin2)
+rmse_glucose2<-cv(mass~triceps+glucose,PimaIndiansDiabetes2,5)
+print(rmse_glucose2)
+```
+Pressure is best predictor with rmse 5.09 we will add it in our model
+
+```{r}
+rmse_diabetes3<-cv(mass~triceps+pressure+diabetes,PimaIndiansDiabetes2,5)
+print(rmse_diabetes3)
+rmse_insulin3<-cv(mass~triceps+pressure+insulin,PimaIndiansDiabetes2,5)
+print(rmse_insulin3)
+rmse_glucose3<-cv(mass~triceps+pressure+glucose,PimaIndiansDiabetes2,5)
+print(rmse_glucose3)
+```
+we will further add diabetes in our model because it reduces rmse to 5.02.
+```{r}
+rmse_insulin4<-cv(mass~triceps+pressure+diabetes+insulin,PimaIndiansDiabetes2,5)
+print(rmse_insulin4)
+rmse_glucose4<-cv(mass~triceps+pressure+diabetes+glucose,PimaIndiansDiabetes2,5)
+print(rmse_glucose4)
+```
+Addition of predictor variables further does not improve
+model. Thus final model will be mass~triceps+pressure+diabetes
+with rmse 5.02
+```{r}
+fits_rmse <- tibble(nvar = 1:4,
+                    rmse = c(rmse_triceps,rmse_pressure2,rmse_diabetes3,rmse_glucose4))
+ggplot(fits_rmse) + geom_line(aes(x=nvar, y=rmse))
+```
+
+In homework 4 proposed model for response variable mass
+was using 4 predictor variables(pressure,triceps,diabetes,pregnant)
+it had rmse 4.97 while current model 
+with predictor variables(triceps,pressure,diabetes) gives rmse 5.02 which is
+slightly worse than previous model.
+
+
+
+
+PROBLEM 5
+
+Final cross validated rmse for best model we found in problem 4
+CANNOT be reported as good measure of rmse on new data. 
+One of the reason is that best model for this data may not provide good 
+estimate for new set of data.
+For RMSE to be a good estimate , we should calculate it on set of test data
+so as to make sure that it was not used to select the best model.

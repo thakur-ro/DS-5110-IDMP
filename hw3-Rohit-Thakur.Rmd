@@ -1,0 +1,288 @@
+---
+title: "hw3-Rohit-Thakur"
+author: "Rohit Thakur"
+date: "2/9/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+Problems 1–2 use data from the US Department of Education’s Civil Rights Data Collection. 
+Download the zipped 2015-2016 data from
+https://www2.ed.gov/about/offices/list/ocr/docs/crdc-2015-16.html. 
+The Public Use Data File User’s Manual should be included in the zipped files,
+or can be downloaded at the same location.
+Use it as a reference to help you understand the dataset.
+Read the documentation for the function read_csv() from the readr package, 
+and use it to import the dataset into R. 
+Check the User’s Manual for how missing values were reported, and handle them appropriately.
+Treat all reserve codes as missing.
+
+PART A
+
+PROBLEM 1 ->
+
+We would like to investigate whether Hispanic and Native American (American Indian / Alaska Native)
+students are over- or under-represented in Gifted & Talented programs.
+Create a new data.frame containing only schools with a Gifted & Talented program with the following
+columns:
+• The total number of students enrolled at each school
+• The number of Hispanic students and Native American students at each school
+• The total number of students in the school’s GT program
+• The number of students in the GT program who are Hispanic or Native American
+• The proportion of students at each school who are Hispanic or Native American among all students
+• The proportion of students in the GT program who are Hispanic or Native American among students
+in the GT program
+Plot the proportion of Hispanic and Native American students at each school (on the x-axis) versus the
+proportion of GT students who are Hispanic and Native American (on the y-axis). Include a smoothing line
+on the plot.
+What do you observe in the plot? 
+Does the plot indicate an over- or under-representation of Hispanic and
+Native American students in Gifted & Talented programs?
+Calculate the overall proportion of Hispanic and 
+Native American students across all schools and the overall
+proportion of GT students who are Hispanic and Native American.
+Are Hispanic and Native American students over- 
+or under-represented in Gifted & Talented programs?
+
+Answer:
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+school<-read.csv("D:/Spring 20 Sem 2/DMP/2015-16-crdc-data (1)/Data Files and Layouts/CRDC 2015-16 School Data.csv",na=c("-2","-5","-6","-7","-8","-9"))
+#Filtering for schools containing GT program
+school<-filter(school,school$SCH_GT_IND == "Yes") 
+school1<-school
+#Total Enrollment
+school1$Tot_enr<-school1$TOT_ENR_M + school1$TOT_ENR_F
+#Total students in gt program
+school1$Tot_stud_gt<-school$TOT_GTENR_M + school$TOT_GTENR_F
+#total hispanic and native americans in gt program
+school1$Tot_HN_GT<-school1$SCH_GTENR_HI_M + 
+  school1$SCH_GTENR_HI_F + 
+  school1$SCH_GTENR_AM_M + school1$SCH_GTENR_AM_F
+#total hispanic and native americans in school
+school1$TOT_HN<-school1$SCH_ENR_HI_M +
+  school1$SCH_ENR_HI_F + 
+  school1$SCH_ENR_AM_F + school1$SCH_ENR_AM_M
+#Proportion of hispanic or native americans amongst everyone in the school
+school1$PROP_HN<-(school1$TOT_HN)/(school1$Tot_enr)
+#Proportion of hispanic or native americans in gt program amongst evryone in the gt program
+school1$PROP_HN_GT<-(school1$Tot_HN_GT)/(school1$Tot_stud_gt)
+schgt<-select(school1,Tot_enr,Tot_stud_gt,Tot_HN_GT,TOT_HN,PROP_HN,PROP_HN_GT)
+#New dataframe with required columns
+schgt%>%sample_n(10000)%>%ggplot(aes(x=PROP_HN,y=PROP_HN_GT))+
+  geom_point()+
+  geom_smooth()+
+  xlab("Proportion of Hispanic and Native") + 
+  ylab("Proportion of Hispanic and Native in GT program")
+```
+In above graph by observing nature of the smooth line we can see that there is under representation of proportion of hispanic and native students in GT program.
+
+```{r}
+summarise(schgt,
+pr_hn=sum(TOT_HN, na.rm=TRUE) / sum(Tot_enr, na.rm=TRUE),
+pr_hn_gt=sum(Tot_HN_GT, na.rm=TRUE) / sum(Tot_stud_gt, na.rm=TRUE))
+```
+As we can see above overall proportion of hispanic and native american student in gifted
+and talented program is less than that of overall proportion of hispanic and
+native american students. Thus Hispanic and Native American students are under-represented
+in Gifted & Talented programs.
+
+
+
+
+PROBLEM 2->
+We would like to investigate whether disabled 
+students are disproportionately referred to law enforcement for discipline.
+Create a new data.frame with the following columns:
+• The total number of students enrolled at each school
+• The number of disabled students (served by IDEA) at each school
+• The total number of students who were referred to law enforcement
+• The number of disabled students (served by IDEA) who were referred to law enforcement
+• The proportion of disabled students (served by IDEA) at each school among of all students
+• The proportion of students who were referred to law enforcement and are disabled (served by IDEA)
+among all students referred to law enforcement
+Plot the proportion of disabled students at each school 
+(on the x-axis) versus the proportion of students were
+referred to law enforcement and are disabled (on the y-axis). 
+Include a smoothing line on the plot.
+What do you observe in the plot? 
+Does the plot indicate an over- or under-representation of disabled students
+among students who are referred to law enforcement?
+Calculate the overall proportion of disabled students 
+across all schools and the overall proportion of students
+who were referred to law enforcement and 
+are disabled (served by IDEA) among all students referred to law
+enforcement across all schools.
+Are disabled students disproportionately referred to law enforcement?
+
+
+Answer:
+
+
+```{r}
+school2<-read.csv("D:/Spring 20 Sem 2/DMP/2015-16-crdc-data (1)/Data Files and Layouts/CRDC 2015-16 School Data.csv",na=c("-2","-5","-6","-7","-8","-9"))
+#CREATE A DATAFRAME WITH FOLLOWING
+
+# The total number of students enrolled at each school
+# The number of disabled students (served by IDEA) at each school
+# The total number of students who were referred to law enforcement
+# The number of disabled students (served by IDEA) who were referred to law enforcement
+# The proportion of disabled students (served by IDEA) at each school among of all students
+# The proportion of students who were referred to law enforcement and are disabled (served by IDEA)among all students referred to law enforcement
+
+sch_disable <- transmute(school2,
+enr_tot = TOT_ENR_M + TOT_ENR_F,
+enr_dis_tot = TOT_IDEAENR_M + TOT_IDEAENR_F,
+tot_law = TOT_DISCWODIS_REF_M + TOT_DISCWODIS_REF_F + TOT_DISCWDIS_REF_IDEA_F + TOT_DISCWDIS_REF_IDEA_M , 
+tot_law_idea = TOT_DISCWDIS_REF_IDEA_F + TOT_DISCWDIS_REF_IDEA_M,
+pr_disabled = enr_dis_tot/ enr_tot,
+pr_law = tot_law_idea / tot_law)
+
+#PLOT 
+sch_disable%>%
+sample_n(10000) %>%
+ggplot(aes(x=pr_disabled, y=pr_law)) +
+geom_point() +
+geom_smooth(se=FALSE) +
+geom_segment(aes(x=0, y=0, xend=1, yend=1), color="red") +
+coord_fixed(x=c(0,1), y=c(0,1)) +
+labs(x='Proportion of Disabled students at each school', y='Proportion of disabled students referred
+     to law enforcements')
+```
+From the smooth line we can see over representation of proportion of disabled students who were referred to law enforcement. A lot of schools have below 25% percentage of disabled students. Similarly students referred to law enforcements hav maximum population density below 50%.
+
+
+From the proportions below disabled students are tend to be over represented among disabled students
+referred to law enforcement.
+```{r}
+#Calculating overall proportions
+summarise(sch_disable,
+ovr_pr_dis=sum(enr_dis_tot, na.rm=TRUE) / sum(enr_tot, na.rm=TRUE),
+ovr_pr_law=sum(tot_law_idea, na.rm=TRUE) / sum(tot_law, na.rm=TRUE))
+
+```
+
+
+
+PART B
+Problems 3–5 uses a subset of the DBLP database of bibliographic 
+information on major computer science
+journals and proceedings, available from 
+https://data.mendeley.com/datasets/3p9w84t5mr. 
+The dataset has been processed to include predictions 
+of the author’s genders using the open-source Genderize API.
+The processed data has been made available in the form of SQL scripts 
+that import the data into a MySQL database.
+We are primarily interested in the “general” and “authors” tables created by the “main.sql” and
+“authors.sql” scripts, respectively.
+```{r}
+library(dbplyr)
+library(DBI)
+library(RMySQL)
+con<-dbConnect(MySQL(),user="root",password="password",dbname="dblp",host="localhost")
+dblp_main<-tbl(con,"general")
+dbListTables(con)
+dblp_authors<-tbl(con,"authors")
+dblp_authors<-as.data.frame(dblp_authors)
+dblp_main<-as.data.frame(dblp_main)
+```
+
+PROBLEM 3
+Filter the data to include only the authors for whom a gender was 
+predicted as ‘male’ or ‘female’ with a
+probability of 0.90 or greater, and 
+then create a bar plot showing the total number of distinct male 
+and female authors published each year. 
+Comment on the visualization
+
+
+Answer:
+
+From the graph below there is huge difference between male and female authors 
+getting published each year. Male authors are substantially getting increased publications
+each year. Female authors published are less than 5000 over all the years.
+```{r}
+dblp_authors_filt<-dblp_authors%>%filter((gender=="M"|gender=="F") & prob>=0.90)
+dblp_authors_filt %>%
+  inner_join(dblp_main,by=c("k"="k"))%>%
+  distinct()%>%
+  ggplot()+geom_bar(aes(x=factor(year),fill=gender),position="dodge")+
+  xlab("Distinct male and female authors published each year")+
+  ylab("total number") + theme(axis.text.x = element_text(angle = 90))
+```
+
+
+PROBLEM 4
+Still including only the authors for whom a gender was
+predicted with a probability of 0.90 or greater,
+create a stacked bar plot showing the 
+proportions of distinct male authors vs. distinct female authors published each
+year. 
+(The stacked bars for each year will sum to one.) 
+Comment on the visualization.
+
+
+Answer:
+
+From the graph below we can see that proportions of female authors are steadily increasing.
+For the first few years there were no female candidates. Male candidates are in huge amount compared to female authors.
+```{r}
+dblp_authors_filt%>%
+  inner_join(dblp_main,by=c("k"="k"))%>%
+  distinct()%>%
+  ggplot()+geom_bar(aes(x=factor(year),fill=gender),position="fill")+
+  xlab("Distinct male and female authors published each year")+
+  ylab("proportion") + theme(axis.text.x = element_text(angle = 90))
+```
+
+
+
+
+
+PROBLEM 5
+
+Still including only the authors for whom a gender was predicted 
+with a probability of 0.90 or greater, 
+create a faceted bar plots showing the 
+proportions of female first authorships for each year for each domain (CS, DE,
+SE, and TH). 
+(If a conference belongs to multiple domains, you may include it for both of them.) 
+Comment on the visualization. 
+Which domains have the highest and lowest representation of papers with female first
+authors?
+
+
+
+Answer:
+In the graph below CS has highest representation of female first authors and 
+SE has lowest representation of female first authors. 
+Also we can see steady increase in female first author in cs unlike other types of conferences.
+SE also has more number of female authors than before.
+Some years are missing as there are no first female authors in those years for that type. 
+```{r}
+trial_1 <-
+dblp_authors_filt %>%
+  inner_join(dblp_main,by=c("k"="k"))%>%
+  distinct()%>%filter(pos==0)
+trial_2 <- trial_1 %>% gather(cs,de,se,th,key="type",value="count")%>%
+  filter(count==1)
+trial_3 <- trial_2 %>% group_by(year, type, gender) %>% tally()
+trial_4 <- summarise(group_by(trial_3, year, type, gender, n))
+trial_5_sum_n <- summarise(group_by(trial_4, year), sum(n))
+trial_6 <- merge(trial_4, trial_5_sum_n, by = "year")
+trial_6 <- trial_6 %>% filter(gender == "F")
+trial_7 <- summarise(group_by(trial_6, year, type, gender, n), proportion = n / `sum(n)`)
+ggplot(trial_7)+geom_bar(aes(x=factor(year), y=proportion), stat = "identity")+
+  facet_wrap(~type) +
+  xlab("Years")+ 
+  ylab("Proportion of female with first authorship")+
+  theme(axis.text.x = element_text(angle = 90))
+```
